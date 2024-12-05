@@ -1,5 +1,5 @@
 import { ViewChild, Component, ElementRef, AfterViewInit } from '@angular/core';
-import { Cartesian3, Math, ImageryLayer, SingleTileImageryProvider, Viewer, HeadingPitchRoll, Transforms, Color, PolylineGlowMaterialProperty, TimeIntervalCollection, TimeInterval, SampledPositionProperty, JulianDate, Entity } from 'cesium';
+import { Cartesian3, Math, ImageryLayer, SingleTileImageryProvider, Viewer, HeadingPitchRoll, Transforms, Color, PolylineGlowMaterialProperty, TimeIntervalCollection, TimeInterval, SampledPositionProperty, JulianDate, Entity, ConstantProperty, ClockViewModel, VelocityOrientationProperty, SampledProperty, Quaternion, CallbackProperty } from 'cesium';
 import { Orbit } from './orbit';
 
 @Component({
@@ -13,6 +13,7 @@ export class AppComponent implements AfterViewInit {
   viewer: Viewer;
   satellite: Entity;
   position: SampledPositionProperty;
+  orientation: SampledProperty
   isInitial = false;
 
   constructor() { }
@@ -26,23 +27,8 @@ export class AppComponent implements AfterViewInit {
     socket.onmessage = (event) => {
       const orbit: Orbit = JSON.parse(event.data);
       if (!this.isInitial) this.initTime(orbit);
-      this.updateOrbit(orbit);
+      this.updateSatelliteAndOrbit(orbit);
     }
-  }
-
-  updateOrbit(orbit: Orbit) {
-    const isoTimeString = orbit.time.replace(' ', 'T') + 'Z';
-    const isoTime = JulianDate.fromIso8601(isoTimeString);
-    const position = Cartesian3.fromDegrees(orbit.lon, orbit.lat, orbit.alt);
-    this.position.addSample(isoTime, position);
-  }
-
-  initTime(orbit: Orbit) {
-    const isoTimeString = orbit.time.replace(' ', 'T') + 'Z';
-    const isoTime = JulianDate.fromIso8601(isoTimeString);
-    this.viewer.clock.currentTime = isoTime;
-
-    this.isInitial = true;
   }
 
   initViewer() {
@@ -52,6 +38,13 @@ export class AppComponent implements AfterViewInit {
           '/assets/earth.jpg', {
         }), {}
       ),
+      clockViewModel: new ClockViewModel(),
+    });
+    this.viewer.clock.multiplier = 10;
+    this.viewer.clock.shouldAnimate = true;
+    this.viewer.clock.onTick.addEventListener(() => {
+      this.satellite.path!.trailTime = new SampledProperty(JulianDate.secondsDifference(
+        this.viewer.clock.currentTime, this.viewer.clock.startTime));
     });
   }
 
@@ -90,12 +83,14 @@ export class AppComponent implements AfterViewInit {
     const displayStartTime = JulianDate.fromIso8601('1970-01-01T00:00:00Z');
     const displayEndTime = JulianDate.fromIso8601('2300-01-01T00:00:00Z');
     this.position = new SampledPositionProperty();
+    this.orientation = new SampledProperty(Quaternion);
     this.satellite = this.viewer.entities.add({
       availability: new TimeIntervalCollection([new TimeInterval({
         start: displayStartTime,
         stop: displayEndTime
       })]),
       position: this.position,
+      orientation: this.orientation,
       model: {
         uri: '/assets/satellite.glb',
         minimumPixelSize: 64,
@@ -108,8 +103,28 @@ export class AppComponent implements AfterViewInit {
           glowPower: 0.2,
           color: Color.YELLOW
         }),
-        width: 5
-      }
+        width: 5,
+        leadTime: 0,
+        trailTime: 60
+      },
     });
+  }
+
+  initTime(orbit: Orbit) {
+    const isoTimeString = orbit.time.replace(' ', 'T') + 'Z';
+    const isoTime = JulianDate.fromIso8601(isoTimeString);
+    this.viewer.clock.currentTime = isoTime;
+    this.isInitial = true;
+  }
+
+  updateSatelliteAndOrbit(orbit: Orbit) {
+    const isoTimeString = orbit.time.replace(' ', 'T') + 'Z';
+    const isoTime = JulianDate.fromIso8601(isoTimeString);
+    const position = Cartesian3.fromDegrees(orbit.lon, orbit.lat, orbit.alt);
+    const hpr = new HeadingPitchRoll(Math.toRadians(orbit.roll), Math.toRadians(orbit.pitch), Math.toRadians(orbit.yaw));
+    const orientation = Transforms.headingPitchRollQuaternion(position, hpr);
+
+    this.position.addSample(isoTime, position);
+    this.orientation.addSample(isoTime, orientation)
   }
 }

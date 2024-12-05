@@ -3,4 +3,7 @@ export interface Orbit {
     lat: number;
     lon: number;
     alt: number;
+    roll: number;
+    pitch: number;
+    yaw: number;
 }
