@@ -1,6 +1,5 @@
-import { ViewChild, Component, ElementRef, OnInit, AfterViewInit } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
-import { Cartesian3, Math, ImageryLayer, Rectangle, SingleTileImageryProvider, Viewer, HeadingPitchRoll, Transforms, Color, PolylineGlowMaterialProperty, TimeIntervalCollection, TimeInterval, VelocityOrientationProperty, SampledPositionProperty, JulianDate, Entity, CallbackProperty } from 'cesium';
+import { ViewChild, Component, ElementRef, AfterViewInit } from '@angular/core';
+import { Cartesian3, Math, ImageryLayer, SingleTileImageryProvider, Viewer, HeadingPitchRoll, Transforms, Color, PolylineGlowMaterialProperty, TimeIntervalCollection, TimeInterval, SampledPositionProperty, JulianDate, Entity } from 'cesium';
 import { Orbit } from './orbit';
 
 @Component({
@@ -32,20 +31,17 @@ export class AppComponent implements AfterViewInit {
   }
 
   updateOrbit(orbit: Orbit) {
-    let date = new Date(orbit.time);
-    let copiedDate = new Date(date.getTime());
-    copiedDate.setHours(copiedDate.getHours() + 9);
-    const dateTime = JulianDate.fromDate(copiedDate);
-    const position = Cartesian3.fromDegrees(orbit.lon, orbit.lat, orbit.alt * 1000);
-    this.position.addSample(dateTime, position);
+    const isoTimeString = orbit.time.replace(' ', 'T') + 'Z';
+    const isoTime = JulianDate.fromIso8601(isoTimeString);
+    const position = Cartesian3.fromDegrees(orbit.lon, orbit.lat, orbit.alt);
+    this.position.addSample(isoTime, position);
   }
 
   initTime(orbit: Orbit) {
-    let date = new Date(orbit.time);
-    let copiedDate = new Date(date.getTime());
-    copiedDate.setHours(copiedDate.getHours() + 9);
-    const dateTime = JulianDate.fromDate(copiedDate);
-    this.viewer.clock.currentTime = dateTime.clone();
+    const isoTimeString = orbit.time.replace(' ', 'T') + 'Z';
+    const isoTime = JulianDate.fromIso8601(isoTimeString);
+    this.viewer.clock.currentTime = isoTime;
+
     this.isInitial = true;
   }
 
@@ -91,8 +87,8 @@ export class AppComponent implements AfterViewInit {
   }
 
   initSatellite() {
-    const displayStartTime = JulianDate.fromDate(new Date('1970-01-01'));
-    const displayEndTime = JulianDate.fromDate(new Date('2300-01-01'));
+    const displayStartTime = JulianDate.fromIso8601('1970-01-01T00:00:00Z');
+    const displayEndTime = JulianDate.fromIso8601('2300-01-01T00:00:00Z');
     this.position = new SampledPositionProperty();
     this.satellite = this.viewer.entities.add({
       availability: new TimeIntervalCollection([new TimeInterval({
