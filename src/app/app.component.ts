@@ -1,5 +1,5 @@
-import { ViewChild, Component, ElementRef, AfterViewInit } from '@angular/core';
-import { Cartesian3, Math, ImageryLayer, SingleTileImageryProvider, Viewer, HeadingPitchRoll, Transforms, Color, PolylineGlowMaterialProperty, TimeIntervalCollection, TimeInterval, SampledPositionProperty, JulianDate, Entity, ConstantProperty, ClockViewModel, VelocityOrientationProperty, SampledProperty, Quaternion, CallbackProperty } from 'cesium';
+import { AfterViewInit, Component, ElementRef, ViewChild } from '@angular/core';
+import { Cartesian3, ClockViewModel, Color, Entity, HeadingPitchRoll, ImageryLayer, JulianDate, Math, PolylineGlowMaterialProperty, Quaternion, SampledPositionProperty, SampledProperty, SingleTileImageryProvider, TimeInterval, TimeIntervalCollection, Transforms, Viewer } from 'cesium';
 import { Orbit } from './orbit';
 
 @Component({
@@ -40,7 +40,8 @@ export class AppComponent implements AfterViewInit {
       ),
       clockViewModel: new ClockViewModel(),
     });
-    this.viewer.clock.multiplier = 10;
+    // this.viewer.clock.multiplier = 10;
+    this.viewer.clock.multiplier = 1;
     this.viewer.clock.shouldAnimate = true;
     this.viewer.clock.onTick.addEventListener(() => {
       this.satellite.path!.trailTime = new SampledProperty(JulianDate.secondsDifference(
@@ -111,20 +112,26 @@ export class AppComponent implements AfterViewInit {
   }
 
   initTime(orbit: Orbit) {
-    const isoTimeString = orbit.time.replace(' ', 'T') + 'Z';
-    const isoTime = JulianDate.fromIso8601(isoTimeString);
+    // const isoTimeString = orbit.time.replace(' ', 'T') + 'Z';
+    const isoTime = JulianDate.fromIso8601(orbit.time);
     this.viewer.clock.currentTime = isoTime;
     this.isInitial = true;
   }
 
   updateSatelliteAndOrbit(orbit: Orbit) {
-    const isoTimeString = orbit.time.replace(' ', 'T') + 'Z';
-    const isoTime = JulianDate.fromIso8601(isoTimeString);
+    // const isoTimeString = orbit.time.replace(' ', 'T') + 'Z';
+    const isoTime = JulianDate.fromIso8601(orbit.time);
     const position = Cartesian3.fromDegrees(orbit.lon, orbit.lat, orbit.alt);
-    const hpr = new HeadingPitchRoll(Math.toRadians(orbit.roll), Math.toRadians(orbit.pitch), Math.toRadians(orbit.yaw));
-    const orientation = Transforms.headingPitchRollQuaternion(position, hpr);
+    // const hpr = new HeadingPitchRoll(Math.toRadians(orbit.roll), Math.toRadians(orbit.pitch), Math.toRadians(orbit.yaw));
+    // const orientation = Transforms.headingPitchRollQuaternion(position, hpr);
 
     this.position.addSample(isoTime, position);
-    this.orientation.addSample(isoTime, orientation)
+    // this.orientation.addSample(isoTime, orientation)
+
+    // this.viewer.camera.flyTo({
+    //   destination: Cartesian3.fromDegrees(orbit.lon, orbit.lat, 5000000),
+    //   duration: 3.0,
+    //   maximumHeight: 5000000,
+    // })
   }
 }
